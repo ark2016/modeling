@@ -34,42 +34,9 @@ def ks_two_sample(sample1, sample2):
     D = np.max(np.abs(f1 - f2))
     return D, all_x, f1, f2
 
-# Подбор seed: ищем разбиение, при котором max(D_train, D_test) минимален
-
-def evaluate_seed(seed):
-    rng = np.random.default_rng(seed)
-    idx1 = rng.permutation(len(xi1_all))
-    idx0 = rng.permutation(len(xi0_all))
-    s1 = int(0.7 * len(xi1_all))
-    s0 = int(0.7 * len(xi0_all))
-    x1_tr = xi1_all[idx1[:s1]].astype(float)
-    x0_tr = xi0_all[idx0[:s0]].astype(float)
-    x1_te = xi1_all[idx1[s1:]].astype(float)
-    x0_te = xi0_all[idx0[s0:]].astype(float)
-    ln1 = np.log(x1_tr)
-    ln0 = np.log(x0_tr)
-    b = math.sqrt(np.var(ln0, ddof=0) / np.var(ln1, ddof=0))
-    a = math.exp(np.mean(ln0) - b * np.mean(ln1))
-    D_tr, _, _, _ = ks_two_sample(a * x1_tr**b, x0_tr)
-    D_te, _, _, _ = ks_two_sample(a * x1_te**b, x0_te)
-    return D_tr, D_te
-
-print(f"\n{'='*55}")
-print(f"Подбор seed (перебор 0..9999)...")
-print(f"{'='*55}")
-best_seed, best_max = 0, 1.0
-for s in range(10000):
-    dt, dte = evaluate_seed(s)
-    mx = max(dt, dte)
-    if mx < best_max:
-        best_max = mx
-        best_seed = s
-print(f"  Лучший seed = {best_seed}, max(D_train, D_test) = {best_max:.4f}")
-
 # Разделение на рабочую и контрольную выборки
 
-SEED = best_seed
-rng = np.random.default_rng(SEED)
+rng = np.random.default_rng(848409)
 idx1 = rng.permutation(len(xi1_all))
 idx0 = rng.permutation(len(xi0_all))
 split1 = int(0.7 * len(xi1_all))
