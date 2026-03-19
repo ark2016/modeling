@@ -4,7 +4,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-
 rcParams["font.family"] = "DejaVu Sans"
 with open("diabetes.csv") as f:
     rows = list(csv.DictReader(f))
@@ -13,9 +12,6 @@ xi0_all = np.array([int(r["Glucose"].strip()) for r in rows if r["Outcome"].stri
 xi1_all = xi1_all[xi1_all > 0]
 xi0_all = xi0_all[xi0_all > 0]
 print(f"Всего: n(ξ₁) = {len(xi1_all)}, n(ξ₀) = {len(xi0_all)}")
-
-# Вспомогательные функции
-
 D_005 = 0.05
 N_BINS = 6
 
@@ -43,14 +39,9 @@ def check_bins(phi, xi0, edges):
     p2 = h2 / len(xi0)
     return np.max(np.abs(p1 - p2)), p1, p2
 
-# Используем всю выборку
-
 xi1 = xi1_all
 xi0 = xi0_all
 print(f"\nn(ξ₁) = {len(xi1)}, n(ξ₀) = {len(xi0)}")
-
-# Исходные группы РАЗЛИЧАЮТСЯ
-
 D_raw, _, _, _ = ks_two_sample(xi1, xi0)
 print(f"\n{'='*55}")
 print(f"ШАГ 1. Проверяем: различаются ли группы?")
@@ -59,9 +50,6 @@ print(f"  max|F(ξ₁) − F(ξ₀)| = {D_raw:.4f}")
 print(f"  D₀.₀₅              = {D_005}")
 print(f"  {D_raw:.4f} > {D_005}  →  группы РАЗЛИЧАЮТСЯ")
 print(f"  → нужна модель связи φ: ξ₀ = φ(ξ₁)")
-
-# Проверка нормальности
-
 print(f"\n{'='*55}")
 print(f"ШАГ 2. Проверка нормальности (Шапиро-Уилк)")
 print(f"{'='*55}")
@@ -95,20 +83,13 @@ print(f"  â = exp(A−b̂·B)  = {a_hat:.4f}")
 print(f"")
 print(f"  Степенная: ξ₀ = {a_hat:.4f} · ξ₁^{b_hat:.4f}")
 
-# Критерий согласия — 6 интервалов
-#    max|p(φ(ξ₁)) − p(ξ₀)| ≤ D₀.₀₅ = 0.05
-
 phi_xi1 = a_hat * xi1 ** b_hat
-
-# Границы интервалов по квантилям ξ₀
 edges = np.quantile(xi0.astype(float), np.linspace(0, 1, N_BINS + 1))
 combined = np.concatenate([phi_xi1, xi0])
 edges[0] = min(combined.min(), edges[0]) - 0.5
 edges[-1] = max(combined.max(), edges[-1]) + 0.5
-
 D_bins, p1, p2 = check_bins(phi_xi1, xi0, edges)
 D_ks, ax_ks, f1_ks, f2_ks = ks_two_sample(phi_xi1, xi0)
-
 print(f"\n{'='*55}")
 print(f"ШАГ 4. Критерий согласия ({N_BINS} интервалов)")
 print(f"  max|p(φ(ξ₁)) − p(ξ₀)| ≤ D₀.₀₅ = {D_005} ?")
@@ -120,26 +101,17 @@ for i in range(N_BINS):
 print(f"")
 print(f"  max|Δp| = {D_bins:.4f}")
 print(f"  {D_bins:.4f} {'≤' if D_bins <= D_005 else '>'} {D_005}  →  {'ДОПУСКАЕТСЯ' if D_bins <= D_005 else 'НЕ ДОПУСКАЕТСЯ'}")
-
-# Таблица эмпирических ФР
 grid = np.arange(50, 250, 25)
 print(f"\n{'='*55}")
 print(f"Таблица эмпирических функций распределения")
 print(f"{'='*55}")
 header = f"{'x':>12}" + "".join(f"{v:>8}" for v in grid)
 print(header)
-for name, data in [("F(ξ₁)", xi1),
-                    ("F(ξ₀)", xi0),
-                    ("F(φ(ξ₁))", phi_xi1)]:
+for name, data in [("F(ξ₁)", xi1), ("F(ξ₀)", xi0), ("F(φ(ξ₁))", phi_xi1)]:
     vals = np.searchsorted(np.sort(data), grid, side="right") / len(data)
     row = f"{name:>12}" + "".join(f"{v:>8.3f}" for v in vals)
     print(row)
-
-# Графики
-
 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-
-# Исходные ФР
 ax = axes[0, 0]
 ax.step(*ecdf(xi1), where="post", label="F(ξ₁)  [Outcome=0]", lw=1.5)
 ax.step(*ecdf(xi0), where="post", label="F(ξ₀)  [Outcome=1]", lw=1.5)
@@ -148,8 +120,6 @@ ax.set_ylabel("F(x)")
 ax.set_title(f"Исходные ФР: D = {D_raw:.4f} > D₀.₀₅ = {D_005}\n→ группы различаются")
 ax.legend()
 ax.grid(True, alpha=0.3)
-
-# Степенная модель — ФР
 ax = axes[0, 1]
 ax.step(*ecdf(xi0), where="post", label="F(ξ₀) — наблюдения", lw=1.5)
 ax.step(*ecdf(phi_xi1), where="post", label="F(φ(ξ₁)) — модель", lw=1.5, ls="--")
@@ -158,22 +128,17 @@ ax.set_ylabel("F(x)")
 ax.set_title(f"Степенная φ = â·ξ₁^b̂: D_KS = {D_ks:.4f}")
 ax.legend()
 ax.grid(True, alpha=0.3)
-
-# Сравнение по 6 интервалам
 ax = axes[1, 0]
 x_pos = np.arange(N_BINS)
 width = 0.35
 ax.bar(x_pos - width/2, p1, width, label="p(φ(ξ₁))", alpha=0.7)
 ax.bar(x_pos + width/2, p2, width, label="p(ξ₀)", alpha=0.7)
 ax.set_xticks(x_pos)
-ax.set_xticklabels([f"{edges[i]:.0f}–{edges[i+1]:.0f}" for i in range(N_BINS)],
-                    rotation=45, fontsize=8)
+ax.set_xticklabels([f"{edges[i]:.0f}–{edges[i+1]:.0f}" for i in range(N_BINS)], rotation=45, fontsize=8)
 ax.set_ylabel("Относительная частота")
 ax.set_title(f"Сравнение по {N_BINS} интервалам: max|Δp| = {D_bins:.4f} ≤ {D_005}")
 ax.legend()
 ax.grid(True, alpha=0.3)
-
-# |ΔF|
 ax = axes[1, 1]
 ax.plot(ax_ks, np.abs(f1_ks - f2_ks), label=f"|ΔF| (max={D_ks:.4f})", lw=1.2)
 ax.axhline(y=D_005, color="red", ls=":", label=f"D₀.₀₅ = {D_005}")
@@ -182,20 +147,15 @@ ax.set_ylabel("|F(φ(ξ₁)) − F(ξ₀)|")
 ax.set_title(f"|F(φ(ξ₁)) − F(ξ₀)|")
 ax.legend()
 ax.grid(True, alpha=0.3)
-
 plt.tight_layout()
 plt.savefig("lab_plots.png", dpi=150)
 print("\nГрафики сохранены: lab_plots.png")
 plt.close()
-
-# Гистограммы
 fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5))
-for ax, data, name in [(axes2[0], xi1, "ξ₁ (Outcome=0)"),
-                        (axes2[1], xi0, "ξ₀ (Outcome=1)")]:
+for ax, data, name in [(axes2[0], xi1, "ξ₁ (Outcome=0)"), (axes2[1], xi0, "ξ₀ (Outcome=1)")]:
     ax.hist(data, bins=25, density=True, alpha=0.6, edgecolor="black", lw=0.5)
     xr = np.linspace(data.min(), data.max(), 200)
-    ax.plot(xr, stats.norm.pdf(xr, np.mean(data), np.std(data)),
-            "r-", lw=2, label="Нормальное")
+    ax.plot(xr, stats.norm.pdf(xr, np.mean(data), np.std(data)), "r-", lw=2, label="Нормальное")
     ax.set_title(f"Гистограмма {name}")
     ax.set_xlabel("Glucose")
     ax.set_ylabel("Плотность")
